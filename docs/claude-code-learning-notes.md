@@ -93,8 +93,37 @@ Expense Tracker App — dashboard, transaction management, filtering.
   - Rigorous review at each stage (spec → design → validation), then PR to merge finished features (25:xx onward).
 - Takeaway: SDD trades vibe-coding speed for predictability — worth it once a feature is non-trivial or touches shared/production code.
 
-## 14. Open Questions / To Revisit
+## 14. Spec-Driven Development in Practice — Database Setup (CampusX video)
+- **Applying the SDD pipeline end-to-end:** first hands-on run of the workflow from Section 13, using the Expense Tracker's database layer as the example feature (4:49-19:40).
+  1. **Spec Document** — wrote a detailed spec at `.claude/specs/01-database-setup.md` covering the DB schema (`users`, `expenses` tables), required functions (`get_db`, `init_db`, `seed_db`), fixed category list, implementation rules (parameterized queries only, no ORM), and a Definition of Done checklist (4:49-8:13).
+  2. **Plan Mode (`/plan`)** — entered Plan Mode before writing any code. It's read-only: Claude Code explores the codebase (existing stubs, `app.py` routes) and proposes an implementation plan without making edits, saved to a plan file for review (9:33-10:49).
+  3. **Execution** — after reviewing/approving the plan, Claude Code implemented `database/db.py` and updated `app.py`, then validated against the spec's acceptance criteria: idempotent `init_db`/`seed_db` (safe to rerun), UNIQUE email constraint, and foreign-key enforcement — checked both by rerunning the app and via direct one-off verification scripts (13:30-15:00).
+  4. **Git workflow** — did the whole feature on a branch (`feature/database-setup`), not directly on `master`: commit → push → PR → merge back into `master` (3:18-4:45, 17:00-19:40).
+- **Takeaway:** the spec file acts as the contract Claude Code implements against and the acceptance criteria double as the manual test plan — writing it up front made execution fast and low-ambiguity instead of iterative guesswork.
+
+## 15. Advanced Claude Code Features for Planning (CampusX video)
+- **Model selection for planning:** switch to Opus via `/model` for complex architectural/planning tasks that need deeper reasoning; reserve Sonnet for implementation once the plan is set (22:30-23:57).
+- **Extended thinking:** enable via `/config` → thinking mode, letting the model reason on a scratchpad before responding — meaningfully improves plan quality for non-trivial designs (24:21-27:00).
+- **Effort level:** tunable setting (`/effort`) that manages token usage during the reasoning phase — higher effort = more thorough reasoning/testing/documentation at higher token cost, lower effort = leaner responses (27:44-30:26).
+- **Ultraplan mode (`/ultraplan`):** cloud-based alternative to local Plan Mode — runs planning in a remote Anthropic-hosted container, letting you edit the generated plan in a web UI before syncing it back down to the local terminal session. Suited for heavier/complex planning tasks than a quick local `/plan` pass (30:35-35:27).
+
+## 16. Custom Slash Commands (CampusX video)
+- **What they are:** saved prompts that act as shortcuts for repeatable tasks, triggered by typing `/command-name` in the terminal (0:33-1:15).
+- **Scope types:**
+  - **Project-scoped** — a Markdown file in `.claude/commands/`. Use for task-specific workflows like database seeding (1:39-1:56).
+  - **User-scoped** — a Markdown file in the home directory's `.claude/commands/`. Accessible across all local projects (1:56-2:15).
+- **Building a command:**
+  1. Create a `.md` file inside the commands folder — the filename becomes the command name (e.g., `seed_user.md` → `/seed_user`) (1:19-1:32, 6:11-6:31).
+  2. Structure the file with: a **description** (clear summary of purpose), **allowed tools** (what the AI can access — file reads, specific bash commands), and **execution logic** (step-by-step instructions: which files to read, data-generation logic, validation checks, DB insertion) (6:46-8:46).
+  3. **Restart the session** — Claude Code only picks up new command files on restart (8:58-9:08).
+- **Arguments:** commands can accept inputs via shell-style args (e.g., `/seed_expense <count>`); the command script extracts them via `$ARGUMENTS`/`args` (12:15-12:45).
+- **Automating feature specs:** a `/create_spec` command standardizes feature planning — automates checking git status, switching to a feature branch, researching the codebase, and generating a structured spec document (16:00-19:21, 32:25-34:03).
+- **The SDD flow, now command-driven:** Spec (`/create_spec`) → Plan (Plan Mode converts spec to technical plan) → Code (execute and validate against acceptance criteria) (31:37-31:57). This operationalizes the pipeline from [§13](#13-spec-driven-development-campusx-video)/[§14](#14-spec-driven-development-in-practice--database-setup-campusx-video) into a repeatable, one-command trigger instead of manual steps each time.
+- **Pro-tip — iterative fixes:** for an incomplete/buggy feature (e.g., missing access controls), identify the issue, plan the fix, then have Claude Code implement the update — keeps the dev cycle iterative and tightly coupled to requirements rather than a one-shot rebuild (41:14-42:04).
+
+## 17. Open Questions / To Revisit
 - (add as they come up)
 
 ---
-*Last updated: 2026-09-01*
+*Last updated: 2026-09-02*
+
