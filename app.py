@@ -1,8 +1,10 @@
-from flask import Flask, render_template
+from flask import Flask, redirect, render_template, request, session, url_for
+from werkzeug.security import generate_password_hash
 
 from database.db import get_db, init_db, seed_db
 
 app = Flask(__name__)
+app.secret_key = "dev-secret-key-change-in-production"
 
 with app.app_context():
     init_db()
@@ -18,9 +20,46 @@ def landing():
     return render_template("landing.html")
 
 
-@app.route("/register")
+@app.route("/register", methods=["GET", "POST"])
 def register():
-    return render_template("register.html")
+    if request.method == "GET":
+        return render_template("register.html")
+
+    name = request.form.get("name", "").strip()
+    email = request.form.get("email", "").strip()
+    password = request.form.get("password", "")
+
+    if not name:
+        return render_template("register.html", error="Full name is required.",
+                                name=name, email=email)
+    if not email:
+        return render_template("register.html", error="Email address is required.",
+                                name=name, email=email)
+    if "@" not in email or "." not in email.split("@")[-1]:
+        return render_template("register.html", error="Enter a valid email address.",
+                                name=name, email=email)
+    if len(password) < 8:
+        return render_template("register.html", error="Password must be at least 8 characters.",
+                                name=name, email=email)
+
+    conn = get_db()
+    existing = conn.execute("SELECT 1 FROM users WHERE email = ?", (email,)).fetchone()
+    if existing:
+        conn.close()
+        return render_template("register.html", error="An account with this email already exists.",
+                                name=name, email=email)
+
+    password_hash = generate_password_hash(password)
+    cursor = conn.execute(
+        "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+        (name, email, password_hash),
+    )
+    conn.commit()
+    user_id = cursor.lastrowid
+    conn.close()
+
+    session["user_id"] = user_id
+    return redirect(url_for("landing"))
 
 
 @app.route("/login")
